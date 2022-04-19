@@ -6,7 +6,7 @@ BS4_HTML_PARSER = "lxml"
 # https://docs.python.org/3/library/unicodedata.html#unicodedata.normalize
 UNICODE_NORMALIZE_FORM = "NFKD"
 
-SQLITE_DATABASE = "temp.sqlite"
+SQLITE_DATABASE = "bricklink.sqlite"
 
 # Currency conversion
 CURRENCY_INFO_URL = "https://open.er-api.com/v6/latest/eur"
