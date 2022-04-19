@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import sys
 import urllib.parse
 from typing import Optional, Callable
 
@@ -446,7 +445,7 @@ class ColoredPartScrape:
         )
 
 
-def run() -> None:
+def run_scrape() -> None:
     categories_page_source = RequestUtil.instance().get_page(BricklinkUrl.categories())
     categories = CategoryScrape.scrape_from_page(categories_page_source)
     for category in categories:
@@ -457,15 +456,3 @@ def run() -> None:
                 f" {category.name!r}, scraping..."
             )
             category.scrape_parts()
-
-
-if __name__ == "__main__":
-    try:
-        run()
-    except KeyboardInterrupt:
-        print("\nReceived Ctrl+C, exiting...")
-        sys.exit(3)
-    except ScrapeError as err:
-        print("\nE: Scraping failed.")
-        print(f"E: {err!s}")
-        sys.exit(2)
