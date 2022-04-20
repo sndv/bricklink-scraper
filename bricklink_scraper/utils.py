@@ -14,13 +14,9 @@ import requests
 import bs4
 
 from config import (
-    REQUEST_DEFAULT_PAUSE_MIN,
-    REQUEST_DEFAULT_PAUSE_MAX,
     USER_AGENTS,
     CURRENCY_INFO_URL,
-    LOCAL_PAGE_DATA_DIR,
     CURRENCY_NAME_MAP,
-    DEFAULT_REQUEST_SESSIONS,
     VALID_ITEM_ID_CHARACTERS,
     UNICODE_NORMALIZE_FORM,
     SAVED_PAGE_DATETIME_FORMAT,
@@ -28,8 +24,6 @@ from config import (
     CURRENCY_INFO_RESPONSE_SUCCESS,
     CURRENCY_INFO_RESPONSE_RATES,
 )
-
-PAGES_LOCAL_DIR = os.path.join(os.path.dirname(__file__), "..", LOCAL_PAGE_DATA_DIR)
 
 
 class ScrapeError(RuntimeError):
@@ -59,7 +53,7 @@ def normalize_str(text: str) -> str:
 
 
 class RequestUtil:
-    _instance = None
+    _instance: Optional[RequestUtil] = None
 
     REQUEST_BASE_HEADERS = {
         "Accept": (
@@ -73,14 +67,19 @@ class RequestUtil:
     @classmethod
     def instance(cls) -> RequestUtil:
         if cls._instance is None:
-            cls._instance = cls()
+            raise RuntimeError("RequestUtil instance not initialized")
         return cls._instance
 
-    def __init__(self, sessions_num: int = DEFAULT_REQUEST_SESSIONS):
+    def __init__(
+        self, *, min_pause: float, max_pause: float, sessions_num: int, pages_dir_path: str
+    ):
         if self._instance is not None:
             raise RuntimeError("RequestUtil is a singleton")
-        else:
-            self.__class__._instance = self
+        self.__class__._instance = self
+        self._request_min_pause = min_pause
+        self._request_max_pause = max_pause
+        self._sessions_num = sessions_num
+        self._pages_dir_path = pages_dir_path
 
         self.euro_conversion_rates: Optional[dict[str, float]] = None
 
@@ -91,7 +90,6 @@ class RequestUtil:
             (requests.Session(), self._request_headers(ua), 0)
             for ua in random.sample(USER_AGENTS, k=sessions_num)
         ]
-        self._sessions_num = sessions_num
 
     @classmethod
     def _request_headers(cls, user_agent: str) -> dict[str, str]:
@@ -102,7 +100,7 @@ class RequestUtil:
 
     def get_page(self, url: str) -> str:
         encoded_name = self._filename_encode(url)
-        glob_matches = glob.glob(os.path.join(PAGES_LOCAL_DIR, f"{encoded_name}_*.html"))
+        glob_matches = glob.glob(os.path.join(self._pages_dir_path, f"{encoded_name}_*.html"))
         if glob_matches:
             local_page_file = sorted(glob_matches)[-1]  # use latest in case of multiple
             print(f"D: Reading page from file {local_page_file}")
@@ -110,13 +108,13 @@ class RequestUtil:
                 return fh.read()
         datetime_str = dt.datetime.utcnow().strftime(SAVED_PAGE_DATETIME_FORMAT)
         local_page_file = os.path.join(
-            PAGES_LOCAL_DIR,
+            self._pages_dir_path,
             f"{encoded_name}_{datetime_str}.html",
         )
         page_source = self._download_page(url)
-        if not os.path.isdir(PAGES_LOCAL_DIR):
-            print(f"I: Creating directory for storing page source: {PAGES_LOCAL_DIR}")
-            os.makedirs(PAGES_LOCAL_DIR, exist_ok=False)
+        if not os.path.isdir(self._pages_dir_path):
+            print(f"I: Creating directory for storing page source: {self._pages_dir_path}")
+            os.makedirs(self._pages_dir_path, exist_ok=False)
         print(f"D: Saving page to file {local_page_file}")
         with open(local_page_file, "w", encoding="utf-8") as fh:
             fh.write(page_source)
@@ -147,7 +145,7 @@ class RequestUtil:
         while self._request_sessions:
             sessions = list(enumerate(self._request_sessions))
             session_idx, (session, request_headers, _) = random.choice(sessions)
-            pause = random.uniform(REQUEST_DEFAULT_PAUSE_MIN, REQUEST_DEFAULT_PAUSE_MAX)
+            pause = random.uniform(self._request_min_pause, self._request_max_pause)
             print(f"D: Sleeping {pause} seconds before request...")
             time.sleep(pause)
             self._current_requests_count += 1

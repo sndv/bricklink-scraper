@@ -8,9 +8,13 @@ from peewee import (
     ForeignKeyField,
     DateTimeField,
 )
-from config import SQLITE_DATABASE
+from config import SQLITE_DATABASE_PATH
 
-db = SqliteDatabase(SQLITE_DATABASE)
+
+if SQLITE_DATABASE_PATH is None:
+    raise RuntimeError("Database path not set")
+
+db = SqliteDatabase(SQLITE_DATABASE_PATH)
 
 
 class BaseModel(Model):

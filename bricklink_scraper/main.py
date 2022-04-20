@@ -1,10 +1,65 @@
 import sys
+import os
 
-from utils import ScrapeError
-from scrape import run_scrape
+import click
+
+from utils import ScrapeError, RequestUtil
+import config
+from config import (
+    REQUEST_DEFAULT_PAUSE_MIN,
+    REQUEST_DEFAULT_PAUSE_MAX,
+    DEFAULT_REQUEST_SESSIONS,
+    DEFAULT_DATA_DIR_RELATIVE_PATH,
+    PAGES_DIR_NAME,
+    SQLITE_DATABASE_FILENAME,
+)
+
+DATA_DIR_PATH = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), DEFAULT_DATA_DIR_RELATIVE_PATH)
+)
 
 
-def main() -> None:
+@click.command()
+@click.option(
+    "--min-pause",
+    type=float,
+    default=REQUEST_DEFAULT_PAUSE_MIN,
+    show_default=True,
+    help="Minimum pause before each request in seconds",
+)
+@click.option(
+    "--max-pause",
+    type=float,
+    default=REQUEST_DEFAULT_PAUSE_MAX,
+    show_default=True,
+    help="Maximum pause before each request in seconds",
+)
+@click.option(
+    "--sessions-num",
+    type=int,
+    default=DEFAULT_REQUEST_SESSIONS,
+    show_default=True,
+    help="Number of sessions to split the requests across (1-8)",
+)
+@click.option(
+    "--data-dir",
+    type=str,
+    default=DATA_DIR_PATH,
+    show_default=True,
+    help="Path to data directory where to save the downloaded pages and database",
+)
+def main(min_pause: float, max_pause: float, sessions_num: int, data_dir: str) -> None:
+    config.SQLITE_DATABASE_PATH = os.path.join(data_dir, SQLITE_DATABASE_FILENAME)
+    from scrape import run_scrape
+
+    pages_dir = os.path.join(data_dir, PAGES_DIR_NAME)
+    # Create RequestUtil instance
+    RequestUtil(
+        min_pause=min_pause,
+        max_pause=max_pause,
+        sessions_num=sessions_num,
+        pages_dir_path=pages_dir,
+    )
     try:
         run_scrape()
     except KeyboardInterrupt:

@@ -1,4 +1,5 @@
 import string
+from typing import Optional
 
 # html parser for BeautifulSoup
 BS4_HTML_PARSER = "lxml"
@@ -6,7 +7,9 @@ BS4_HTML_PARSER = "lxml"
 # https://docs.python.org/3/library/unicodedata.html#unicodedata.normalize
 UNICODE_NORMALIZE_FORM = "NFKD"
 
-SQLITE_DATABASE = "bricklink.sqlite"
+SQLITE_DATABASE_FILENAME = "bricklink.sqlite"
+# Path is set later by main.py
+SQLITE_DATABASE_PATH: Optional[str] = None
 
 # Currency conversion
 CURRENCY_INFO_URL = "https://open.er-api.com/v6/latest/eur"
@@ -20,7 +23,8 @@ CURRENCY_NAME_MAP = {
 }
 
 # Local path for saved pages
-LOCAL_PAGE_DATA_DIR = "data/pages"
+DEFAULT_DATA_DIR_RELATIVE_PATH = "../data"
+PAGES_DIR_NAME = "pages"
 # Datetime format for saved pages, needs to be alphabetically sortable
 SAVED_PAGE_DATETIME_FORMAT = "%Y%m%d-%H%M%S"
 
@@ -32,7 +36,7 @@ VALID_ITEM_ID_CHARACTERS = string.ascii_letters + string.digits + "_-."
 DEFAULT_REQUEST_SESSIONS = 2
 # Minimum and maximum pause before request
 REQUEST_DEFAULT_PAUSE_MIN = 1.0
-REQUEST_DEFAULT_PAUSE_MAX = 3.8
+REQUEST_DEFAULT_PAUSE_MAX = 3.0
 
 # List of user agents to pick randomly for each session
 USER_AGENTS = [
