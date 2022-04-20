@@ -30,6 +30,10 @@ class ScrapeError(RuntimeError):
     pass
 
 
+class RequestLimitReached(Exception):
+    pass
+
+
 def parse_url(url: str) -> tuple[parse.SplitResult, dict[str, str]]:
     parsed_url = parse.urlsplit(url)
     parsed_query = dict(parse.parse_qsl(parsed_url.query))
@@ -71,7 +75,13 @@ class RequestUtil:
         return cls._instance
 
     def __init__(
-        self, *, min_pause: float, max_pause: float, sessions_num: int, pages_dir_path: str
+        self,
+        *,
+        min_pause: float,
+        max_pause: float,
+        sessions_num: int,
+        requests_limit: Optional[int],
+        pages_dir_path: str,
     ):
         if self._instance is not None:
             raise RuntimeError("RequestUtil is a singleton")
@@ -79,6 +89,7 @@ class RequestUtil:
         self._request_min_pause = min_pause
         self._request_max_pause = max_pause
         self._sessions_num = sessions_num
+        self._requests_limit = requests_limit
         self._pages_dir_path = pages_dir_path
 
         self.euro_conversion_rates: Optional[dict[str, float]] = None
@@ -140,6 +151,11 @@ class RequestUtil:
         return b32encode(filename.encode()).decode()
 
     def _download_page(self, url: str) -> str:
+        if (
+            self._requests_limit is not None
+            and self._current_requests_count >= self._requests_limit
+        ):
+            raise RequestLimitReached()
         if self._current_requests_start_time < 0:
             self._current_requests_start_time = time.time()
         while self._request_sessions:

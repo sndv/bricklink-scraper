@@ -33,7 +33,7 @@ VALID_ITEM_ID_CHARACTERS = string.ascii_letters + string.digits + "_-."
 
 
 # Number of sessions to split the requests between (1-10)
-DEFAULT_REQUEST_SESSIONS = 2
+DEFAULT_REQUEST_SESSIONS = 1
 # Minimum and maximum pause before request
 REQUEST_DEFAULT_PAUSE_MIN = 1.0
 REQUEST_DEFAULT_PAUSE_MAX = 3.0

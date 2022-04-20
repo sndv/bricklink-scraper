@@ -1,9 +1,10 @@
 import sys
 import os
+from typing import Optional
 
 import click
 
-from utils import ScrapeError, RequestUtil
+from utils import RequestLimitReached, ScrapeError, RequestUtil
 import config
 from config import (
     REQUEST_DEFAULT_PAUSE_MIN,
@@ -42,13 +43,24 @@ DATA_DIR_PATH = os.path.normpath(
     help="Number of sessions to split the requests across (1-8)",
 )
 @click.option(
+    "--requests-limit",
+    type=int,
+    help="Exit after this many requests are performed, by default there is no limit",
+)
+@click.option(
     "--data-dir",
     type=str,
     default=DATA_DIR_PATH,
     show_default=True,
     help="Path to data directory where to save the downloaded pages and database",
 )
-def main(min_pause: float, max_pause: float, sessions_num: int, data_dir: str) -> None:
+def main(
+    min_pause: float,
+    max_pause: float,
+    sessions_num: int,
+    data_dir: str,
+    requests_limit: Optional[int] = None,
+) -> None:
     config.SQLITE_DATABASE_PATH = os.path.join(data_dir, SQLITE_DATABASE_FILENAME)
     from scrape import run_scrape
 
@@ -58,10 +70,14 @@ def main(min_pause: float, max_pause: float, sessions_num: int, data_dir: str) -
         min_pause=min_pause,
         max_pause=max_pause,
         sessions_num=sessions_num,
+        requests_limit=requests_limit,
         pages_dir_path=pages_dir,
     )
     try:
         run_scrape()
+    except RequestLimitReached:
+        print("\nRequests limit reached, exiting...")
+        sys.exit(0)
     except KeyboardInterrupt:
         print("\nReceived Ctrl+C, exiting...")
         sys.exit(3)
