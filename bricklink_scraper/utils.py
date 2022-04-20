@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import time
 import glob
 import random
@@ -32,6 +33,39 @@ class ScrapeError(RuntimeError):
 
 class RequestLimitReached(Exception):
     pass
+
+
+class Print:
+
+    COLORS_ENABLED = sys.stdout.isatty()
+
+    COLOR_DEBUG = "\033[90m"
+    COLOR_WARNING = "\033[33m"
+    COLOR_ERROR = "\033[31m"
+    COLOR_END = "\033[0m"
+
+    @classmethod
+    def _print(cls, msg: str, prefix: str, color: Optional[str] = None) -> None:
+        if cls.COLORS_ENABLED and color:
+            print(f"{color}{prefix}: {msg}{cls.COLOR_END}")
+        else:
+            print(f"{prefix}: {msg}")
+
+    @classmethod
+    def debug(cls, msg: str) -> None:
+        cls._print(msg, prefix="D", color=cls.COLOR_DEBUG)
+
+    @classmethod
+    def info(cls, msg: str) -> None:
+        cls._print(msg, prefix="I")
+
+    @classmethod
+    def warning(cls, msg: str) -> None:
+        cls._print(msg, prefix="W", color=cls.COLOR_WARNING)
+
+    @classmethod
+    def error(cls, msg: str) -> None:
+        cls._print(msg, prefix="E", color=cls.COLOR_ERROR)
 
 
 def parse_url(url: str) -> tuple[parse.SplitResult, dict[str, str]]:
@@ -114,7 +148,7 @@ class RequestUtil:
         glob_matches = glob.glob(os.path.join(self._pages_dir_path, f"{encoded_name}_*.html"))
         if glob_matches:
             local_page_file = sorted(glob_matches)[-1]  # use latest in case of multiple
-            print(f"D: Reading page from file {local_page_file}")
+            Print.debug(f"Reading page from file {local_page_file}")
             with open(local_page_file, encoding="utf-8") as fh:
                 return fh.read()
         datetime_str = dt.datetime.utcnow().strftime(SAVED_PAGE_DATETIME_FORMAT)
@@ -124,16 +158,16 @@ class RequestUtil:
         )
         page_source = self._download_page(url)
         if not os.path.isdir(self._pages_dir_path):
-            print(f"I: Creating directory for storing page source: {self._pages_dir_path}")
+            Print.info(f"Creating directory for storing page source: {self._pages_dir_path}")
             os.makedirs(self._pages_dir_path, exist_ok=False)
-        print(f"D: Saving page to file {local_page_file}")
+        Print.debug(f"Saving page to file {local_page_file}")
         with open(local_page_file, "w", encoding="utf-8") as fh:
             fh.write(page_source)
         return page_source
 
     def convert_to_euro(self, currency: str, amount: float) -> float:
         if self.euro_conversion_rates is None:
-            print("I: Downloading currency conversion info...")
+            Print.info("Downloading currency conversion info...")
             resp = requests.get(CURRENCY_INFO_URL)
             resp.raise_for_status()
             resp_json = resp.json()
@@ -142,7 +176,7 @@ class RequestUtil:
                     f"Failed to retrieve currency conversion info from: {CURRENCY_INFO_URL}"
                 )
             self.euro_conversion_rates = resp_json[CURRENCY_INFO_RESPONSE_RATES]
-            print("D: Received conversion rates:", self.euro_conversion_rates)
+            Print.debug("Received conversion rates: {self.euro_conversion_rates!r}")
         currency_name = CURRENCY_NAME_MAP.get(currency.lower(), currency).upper()
         return amount / self.euro_conversion_rates[currency_name]
 
@@ -162,14 +196,14 @@ class RequestUtil:
             sessions = list(enumerate(self._request_sessions))
             session_idx, (session, request_headers, _) = random.choice(sessions)
             pause = random.uniform(self._request_min_pause, self._request_max_pause)
-            print(f"D: Sleeping {pause} seconds before request...")
+            Print.debug(f"Sleeping {pause} seconds before request...")
             time.sleep(pause)
             self._current_requests_count += 1
             self._request_sessions[session_idx] = (
                 *self._request_sessions[session_idx][:2],
                 self._request_sessions[session_idx][2] + 1,
             )
-            print(f"I: Downloading page (session {session_idx}): {url}")
+            Print.info(f"Downloading page (session {session_idx}): {url}")
             timed_out = False
             try:
                 resp = session.get(url, headers=request_headers, timeout=30)
@@ -184,8 +218,8 @@ class RequestUtil:
                 or "quota exceeded" in resp.text.lower()
             ):
                 total_time = time.time() - self._current_requests_start_time
-                print(
-                    f"W: Bricklinks Quota Exceeded after {self._current_requests_count} total"
+                Print.warning(
+                    f"Bricklinks Quota Exceeded after {self._current_requests_count} total"
                     f" requests performed in {total_time} seconds, averaging 1 request per"
                     f" {total_time/self._current_requests_count} seconds and after"
                     f" {self._request_sessions[session_idx][2]} requests with this session,"
@@ -204,5 +238,5 @@ class RequestUtil:
                 )
             return resp.text
 
-        print(f"W: Quota Exceeded for all {self._sessions_num} sessions, exiting...")
+        Print.warning(f"Quota Exceeded for all {self._sessions_num} sessions, exiting...")
         raise ScrapeError("Bricklinks Quota Exceeded!")

@@ -10,6 +10,7 @@ from config import BS4_HTML_PARSER
 from utils import (
     ScrapeError,
     RequestUtil,
+    Print,
     parse_url,
     next_non_string_sibling,
     ensure_valid_item_id,
@@ -186,7 +187,7 @@ class CategoryScrape:
                 Category.select().where(Category.category_id == self.category_id).first()
             )
             if self._db_record is None:
-                print(f"I: Creating category {self.name!r}...")
+                Print.info(f"Creating category {self.name!r}...")
                 self._db_record = Category.create(name=self.name, category_id=self.category_id)
         return self._db_record
 
@@ -207,7 +208,7 @@ class CategoryScrape:
         return parts
 
     def scrape_parts(self) -> None:
-        print(f"I: Scraping parts list for category: {self.name!r}")
+        Print.info(f"Scraping parts list for category: {self.name!r}")
         first_page_source = RequestUtil.instance().get_page(
             BricklinkUrl.parts_list(self.category_id, page=1)
         )
@@ -242,9 +243,9 @@ class CategoryScrape:
                 )
         if len(parts) != len(set(parts)):
             raise ScrapeError(f"Unexpected repeating items in category {self.name!r}.")
-        print(f"I: Found {total_items} parts in category {self.name!r}: {parts!r}")
+        Print.info(f"Found {total_items} parts in category {self.name!r}: {parts!r}")
 
-        print("D: Starting scrape for missing parts...")
+        Print.debug("Starting scrape for missing parts...")
         for part_id in parts:
             with db.atomic():
                 part_scrape = PartScrape(part_id, self)
@@ -270,7 +271,7 @@ class PartScrape:
     def _get_weight(self, bs: bs4.BeautifulSoup) -> Optional[float]:
         weight_span_list = bs.select(SELECTOR_ITEM_WEIGHT)
         if not weight_span_list:
-            print(f"W: Warning: no weight for part id: {self.part_id!r}")
+            Print.warning(f"Warning: no weight for part id: {self.part_id!r}")
             return None
         if len(weight_span_list) != 1:
             raise ScrapeError(
@@ -293,8 +294,8 @@ class PartScrape:
     def scrape(self) -> None:
         if self.db_record is not None:
             return  # Part already scraped
-        print(
-            f"D: Scraping details for part with id: {self.part_id!r} (category:"
+        Print.debug(
+            f"Scraping details for part with id: {self.part_id!r} (category:"
             f" {self.category.name!r})"
         )
         page_source = RequestUtil.instance().get_page(BricklinkUrl.part_info(self.part_id))
@@ -310,7 +311,9 @@ class PartScrape:
 
         colors_div_list = bs.select(SELECTOR_ITEM_COLORS_LIST)
         if len(colors_div_list) == 0:
-            print(f"W: Warning: part has no color options, so no sell info: {self.part_id!r}")
+            Print.warning(
+                f"Warning: part has no color options, so no sell info: {self.part_id!r}"
+            )
             return
         colors = [
             (
@@ -320,12 +323,12 @@ class PartScrape:
             )
             for color_div in colors_div_list
         ]
-        print(
-            f"D: Found the following colors for part {self.part_id!r} (category:"
+        Print.debug(
+            f"Found the following colors for part {self.part_id!r} (category:"
             f" {self.category.name!r}): {colors!r}"
         )
 
-        print("D: Starting scrape for each color...")
+        Print.debug("Starting scrape for each color...")
         for color_id, color_name, color_rgb in colors:
             colored_part_scrape = ColoredPartScrape(color_id, color_name, color_rgb, self)
             colored_part_scrape.scrape()
@@ -396,9 +399,8 @@ class ColoredPartScrape:
     def scrape(self) -> None:
         if self.db_record is not None:
             raise RuntimeError("Colored part already scraped!")
-        print(
-            f"I: Scraping full details for part {self.part.part_id!r} with color"
-            f" {self.color_name!r}"
+        Print.info(
+            f"Scraping full details for part {self.part.part_id!r} with color {self.color_name!r}"
         )
         page_source = RequestUtil.instance().get_page(
             BricklinkUrl.part_details(self.part.part_id, self.color_id)
@@ -415,8 +417,8 @@ class ColoredPartScrape:
         for td_box, data_fields in zip(td_box_list, self._price_data_fields_list()):
             if normalize_str(td_box.text.strip()).lower() == MISSING_COLORED_ITEM_INFO_STRING:
                 data_fields_str = ", ".join(field[0] for field in data_fields)
-                print(
-                    f"W: Warning: missing info for item {self.part.part_id!r}, color"
+                Print.warning(
+                    f"Warning: missing info for item {self.part.part_id!r}, color"
                     f" {self.color_name!r}: {data_fields_str}"
                 )
                 continue
@@ -451,8 +453,8 @@ def run_scrape() -> None:
     for category in categories:
         missing = category.missing_items_count()
         if missing != 0:
-            print(
-                f"I: {missing}/{category.parts_count} parts missing from DB for"
+            Print.info(
+                f"{missing}/{category.parts_count} parts missing from DB for"
                 f" {category.name!r}, scraping..."
             )
             category.scrape_parts()

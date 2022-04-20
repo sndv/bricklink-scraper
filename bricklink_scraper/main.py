@@ -4,7 +4,7 @@ from typing import Optional
 
 import click
 
-from utils import RequestLimitReached, ScrapeError, RequestUtil
+from utils import RequestLimitReached, ScrapeError, RequestUtil, Print
 import config
 from config import (
     REQUEST_DEFAULT_PAUSE_MIN,
@@ -76,14 +76,17 @@ def main(
     try:
         run_scrape()
     except RequestLimitReached:
-        print("\nRequests limit reached, exiting...")
+        print()
+        Print.info("Requests limit reached, exiting...")
         sys.exit(0)
     except KeyboardInterrupt:
-        print("\nReceived Ctrl+C, exiting...")
+        print()
+        Print.warning("Received Ctrl+C, exiting...")
         sys.exit(3)
     except ScrapeError as err:
-        print("\nE: Scraping failed.")
-        print(f"E: {err!s}")
+        print()
+        Print.error("Scraping failed.")
+        Print.error(str(err))
         sys.exit(2)
 
 
