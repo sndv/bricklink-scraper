@@ -414,7 +414,7 @@ class ColoredPartScrape:
             )
 
         price_values = {}
-        for td_box, data_fields in zip(td_box_list, self._price_data_fields_list()):
+        for td_box, data_fields in zip(td_box_list, self._price_data_fields_list(), strict=True):
             if normalize_str(td_box.text.strip()).lower() == MISSING_COLORED_ITEM_INFO_STRING:
                 data_fields_str = ", ".join(field[0] for field in data_fields)
                 Print.warning(
@@ -428,7 +428,9 @@ class ColoredPartScrape:
                     "Expected exactly 6 lines with detailed info for item"
                     f" {self.part.part_id!r} with color {self.color_name!r}."
                 )
-            for info_tr, (data_field, data_field_re, cnv_fn) in zip(info_tr_list, data_fields):
+            for info_tr, (data_field, data_field_re, cnv_fn) in zip(
+                info_tr_list, data_fields, strict=True
+            ):
                 info_text = normalize_str(info_tr.text.strip()).lower()
                 match = data_field_re.match(info_text)
                 if not match:
