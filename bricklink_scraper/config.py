@@ -20,6 +20,7 @@ CURRENCY_INFO_RESPONSE_RATES = "rates"
 CURRENCY_NAME_MAP = {
     "us": "usd",
     "rol": "ron",
+    "au": "aud",
 }
 
 # Local path for saved pages
