@@ -176,7 +176,7 @@ class RequestUtil:
                     f"Failed to retrieve currency conversion info from: {CURRENCY_INFO_URL}"
                 )
             self.euro_conversion_rates = resp_json[CURRENCY_INFO_RESPONSE_RATES]
-            Print.debug("Received conversion rates: {self.euro_conversion_rates!r}")
+            Print.debug(f"Received conversion rates: {self.euro_conversion_rates!r}")
         currency_name = CURRENCY_NAME_MAP.get(currency.lower(), currency).upper()
         return amount / self.euro_conversion_rates[currency_name]
 

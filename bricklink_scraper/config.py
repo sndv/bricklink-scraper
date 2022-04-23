@@ -21,6 +21,7 @@ CURRENCY_NAME_MAP = {
     "us": "usd",
     "rol": "ron",
     "au": "aud",
+    "ca": "cad",
 }
 
 # Local path for saved pages
