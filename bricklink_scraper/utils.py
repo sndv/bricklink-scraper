@@ -47,9 +47,9 @@ class Print:
     @classmethod
     def _print(cls, msg: str, prefix: str, color: Optional[str] = None) -> None:
         if cls.COLORS_ENABLED and color:
-            print(f"{color}{prefix}: {msg}{cls.COLOR_END}")
+            print(f"{color}{prefix}: {msg}{cls.COLOR_END}", flush=True)
         else:
-            print(f"{prefix}: {msg}")
+            print(f"{prefix}: {msg}", flush=True)
 
     @classmethod
     def debug(cls, msg: str) -> None:
