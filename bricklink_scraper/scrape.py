@@ -57,7 +57,7 @@ SELECTOR_ITEM_DETAILS_MESSAGE = f"{SELECTOR_ITEM_DETAILS_BOX_TD} > center > font
 # String used for missing item info
 MISSING_COLORED_ITEM_INFO_STRING = "(unavailable)"
 # Regular expressions for extracting item counts and prices
-RE_COUNT_COMMON = r"\:\s*(\d+)"
+RE_COUNT_COMMON = r"\:\s*(\-?\d+)"
 RE_PRICE_COMMON = r"\:\s*([a-z]+)\s+\$?([0-9\,]+\.\d{2})"
 RE_TIMES_SOLD = re.compile(rf"times\s+sold{RE_COUNT_COMMON}")
 RE_TOTAL_LOTS = re.compile(rf"total\s+lots{RE_COUNT_COMMON}")
