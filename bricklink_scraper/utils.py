@@ -25,6 +25,7 @@ from config import (
     CURRENCY_INFO_RESPONSE_RESULT,
     CURRENCY_INFO_RESPONSE_SUCCESS,
     CURRENCY_INFO_RESPONSE_RATES,
+    DEFAULT_PAGE_CACHE_TIMEOUT,
 )
 
 
@@ -144,13 +145,24 @@ class RequestUtil:
             **cls.REQUEST_BASE_HEADERS,
         }
 
-    def get_page(self, url: str) -> str:
+    def get_page(self, url: str, cache_timeout: dt.timedelta = DEFAULT_PAGE_CACHE_TIMEOUT) -> str:
         encoded_name = self._filename_encode(url)
         glob_matches = glob.glob(os.path.join(self._pages_dir_path, f"{encoded_name}_*.html.gz"))
         if glob_matches:
             # start with latest in case of multiple
             for local_page_file in reversed(sorted(glob_matches)):
-                Print.debug(f"Reading page from file {local_page_file}")
+                page_timestamp = dt.datetime.strptime(
+                    os.path.basename(local_page_file).split(".")[0].split("_")[1],
+                    SAVED_PAGE_DATETIME_FORMAT,
+                )
+                page_td = dt.datetime.utcnow() - page_timestamp
+                if page_td > cache_timeout:
+                    Print.info(
+                        f"All cached versions of page {url!r} older than {cache_timeout!s},"
+                        " re-downloading page."
+                    )
+                    break
+                Print.debug(f"Reading page {url} from file {local_page_file}")
                 try:
                     with gzip.open(local_page_file) as fh:
                         return fh.read().decode()
@@ -165,7 +177,7 @@ class RequestUtil:
         if not os.path.isdir(self._pages_dir_path):
             Print.info(f"Creating directory for storing page source: {self._pages_dir_path}")
             os.makedirs(self._pages_dir_path, exist_ok=False)
-        Print.debug(f"Saving page to file {local_page_file}")
+        Print.debug(f"Saving page {url} to file {local_page_file}")
         with gzip.open(local_page_file, "wb") as fh:
             fh.write(page_source.encode())
         return page_source

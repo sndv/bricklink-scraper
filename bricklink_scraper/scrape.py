@@ -6,7 +6,13 @@ from typing import Optional, Callable
 
 import bs4
 
-from config import BS4_HTML_PARSER
+from config import (
+    BS4_HTML_PARSER,
+    CATEGORIES_PAGE_CACHE_TIMEOUT,
+    COLORED_PART_DETAILS_CACHE_TIMEOUT,
+    PART_DETAILS_CACHE_TIMEOUT,
+    PARTS_LIST_PAGE_CACHE_TIMEOUT,
+)
 from utils import (
     ScrapeError,
     RequestUtil,
@@ -210,7 +216,8 @@ class CategoryScrape:
     def scrape_parts(self) -> None:
         Print.info(f"Scraping parts list for category: {self.name!r}")
         first_page_source = RequestUtil.instance().get_page(
-            BricklinkUrl.parts_list(self.category_id, page=1)
+            BricklinkUrl.parts_list(self.category_id, page=1),
+            cache_timeout=PARTS_LIST_PAGE_CACHE_TIMEOUT,
         )
         bs = bs4.BeautifulSoup(first_page_source, BS4_HTML_PARSER)
         # Categories with single part are redirected to the part page
@@ -233,7 +240,8 @@ class CategoryScrape:
             parts += self._get_items_from_list_page(first_page_source)
             for page_n in range(2, total_pages + 1):
                 page_source = RequestUtil.instance().get_page(
-                    BricklinkUrl.parts_list(self.category_id, page=page_n)
+                    BricklinkUrl.parts_list(self.category_id, page=page_n),
+                    cache_timeout=PARTS_LIST_PAGE_CACHE_TIMEOUT,
                 )
                 parts += self._get_items_from_list_page(page_source)
             if len(parts) != total_items:
@@ -298,7 +306,10 @@ class PartScrape:
             f"Scraping details for part with id: {self.part_id!r} (category:"
             f" {self.category.name!r})"
         )
-        page_source = RequestUtil.instance().get_page(BricklinkUrl.part_info(self.part_id))
+        page_source = RequestUtil.instance().get_page(
+            BricklinkUrl.part_info(self.part_id),
+            cache_timeout=PART_DETAILS_CACHE_TIMEOUT,
+        )
         bs = bs4.BeautifulSoup(page_source, BS4_HTML_PARSER)
         title = self._get_title(bs)
         weight = self._get_weight(bs)
@@ -403,7 +414,8 @@ class ColoredPartScrape:
             f"Scraping full details for part {self.part.part_id!r} with color {self.color_name!r}"
         )
         page_source = RequestUtil.instance().get_page(
-            BricklinkUrl.part_details(self.part.part_id, self.color_id)
+            BricklinkUrl.part_details(self.part.part_id, self.color_id),
+            cache_timeout=COLORED_PART_DETAILS_CACHE_TIMEOUT,
         )
         bs = bs4.BeautifulSoup(page_source, BS4_HTML_PARSER)
         td_box_list = bs.select(SELECTOR_ITEM_DETAILS_BOX_TD)
@@ -450,7 +462,10 @@ class ColoredPartScrape:
 
 
 def run_scrape() -> None:
-    categories_page_source = RequestUtil.instance().get_page(BricklinkUrl.categories())
+    categories_page_source = RequestUtil.instance().get_page(
+        BricklinkUrl.categories(),
+        cache_timeout=CATEGORIES_PAGE_CACHE_TIMEOUT,
+    )
     categories = CategoryScrape.scrape_from_page(categories_page_source)
     for category in categories:
         missing = category.missing_items_count()
