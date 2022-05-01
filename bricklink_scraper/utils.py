@@ -5,6 +5,7 @@ import sys
 import time
 import glob
 import random
+import gzip
 import unicodedata
 import datetime as dt
 from urllib import parse
@@ -145,24 +146,28 @@ class RequestUtil:
 
     def get_page(self, url: str) -> str:
         encoded_name = self._filename_encode(url)
-        glob_matches = glob.glob(os.path.join(self._pages_dir_path, f"{encoded_name}_*.html"))
+        glob_matches = glob.glob(os.path.join(self._pages_dir_path, f"{encoded_name}_*.html.gz"))
         if glob_matches:
-            local_page_file = sorted(glob_matches)[-1]  # use latest in case of multiple
-            Print.debug(f"Reading page from file {local_page_file}")
-            with open(local_page_file, encoding="utf-8") as fh:
-                return fh.read()
+            # start with latest in case of multiple
+            for local_page_file in reversed(sorted(glob_matches)):
+                Print.debug(f"Reading page from file {local_page_file}")
+                try:
+                    with gzip.open(local_page_file) as fh:
+                        return fh.read().decode()
+                except gzip.BadGzipFile:
+                    Print.warning(f"Bad gzip file, ignoring: {local_page_file}")
         datetime_str = dt.datetime.utcnow().strftime(SAVED_PAGE_DATETIME_FORMAT)
         local_page_file = os.path.join(
             self._pages_dir_path,
-            f"{encoded_name}_{datetime_str}.html",
+            f"{encoded_name}_{datetime_str}.html.gz",
         )
         page_source = self._download_page(url)
         if not os.path.isdir(self._pages_dir_path):
             Print.info(f"Creating directory for storing page source: {self._pages_dir_path}")
             os.makedirs(self._pages_dir_path, exist_ok=False)
         Print.debug(f"Saving page to file {local_page_file}")
-        with open(local_page_file, "w", encoding="utf-8") as fh:
-            fh.write(page_source)
+        with gzip.open(local_page_file, "wb") as fh:
+            fh.write(page_source.encode())
         return page_source
 
     def convert_to_euro(self, currency: str, amount: float) -> float:
