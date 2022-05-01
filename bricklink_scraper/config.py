@@ -42,11 +42,11 @@ REQUEST_DEFAULT_PAUSE_MIN = 1.0
 REQUEST_DEFAULT_PAUSE_MAX = 3.0
 
 # Cache timeouts
-CATEGORIES_PAGE_CACHE_TIMEOUT = timedelta(minutes=10)
-PARTS_LIST_PAGE_CACHE_TIMEOUT = timedelta(minutes=20)
-PART_DETAILS_CACHE_TIMEOUT = timedelta(days=10)
-COLORED_PART_DETAILS_CACHE_TIMEOUT = timedelta(days=10)
-DEFAULT_PAGE_CACHE_TIMEOUT = timedelta(days=10)
+CATEGORIES_PAGE_CACHE_TIMEOUT = timedelta(minutes=30)
+PARTS_LIST_PAGE_CACHE_TIMEOUT = timedelta(hours=4)
+PART_DETAILS_CACHE_TIMEOUT = timedelta(days=14)
+COLORED_PART_DETAILS_CACHE_TIMEOUT = timedelta(days=14)
+DEFAULT_PAGE_CACHE_TIMEOUT = timedelta(days=14)
 
 # List of user agents to pick randomly for each session
 USER_AGENTS = [
