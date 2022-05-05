@@ -469,7 +469,12 @@ def run_scrape() -> None:
     categories = CategoryScrape.scrape_from_page(categories_page_source)
     for category in categories:
         missing = category.missing_items_count()
-        if missing != 0:
+        if missing < 0:
+            Print.warning(
+                f"Negative missing element count for category {category.name!r}: {missing} (more"
+                " elements in DB than on the website, consider rebuilding DB)"
+            )
+        elif missing > 0:
             Print.info(
                 f"{missing}/{category.parts_count} parts missing from DB for"
                 f" {category.name!r}, scraping..."
