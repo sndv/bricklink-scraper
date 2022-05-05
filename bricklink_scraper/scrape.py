@@ -475,3 +475,5 @@ def run_scrape() -> None:
                 f" {category.name!r}, scraping..."
             )
             category.scrape_parts()
+    print("\n")
+    Print.info("SUCCESS: All categories fully scraped!")
