@@ -6,6 +6,7 @@ import time
 import glob
 import random
 import gzip
+import re
 import unicodedata
 import datetime as dt
 from urllib import parse
@@ -145,7 +146,12 @@ class RequestUtil:
             **cls.REQUEST_BASE_HEADERS,
         }
 
-    def get_page(self, url: str, cache_timeout: dt.timedelta = DEFAULT_PAGE_CACHE_TIMEOUT) -> str:
+    def get_page(
+        self,
+        url: str,
+        cache_timeout: dt.timedelta = DEFAULT_PAGE_CACHE_TIMEOUT,
+        allow_redirect_to: Optional[re.Pattern] = None,
+    ) -> str:
         encoded_name = self._filename_encode(url)
         glob_matches = glob.glob(os.path.join(self._pages_dir_path, f"{encoded_name}_*.html.gz"))
         if glob_matches:
@@ -173,7 +179,7 @@ class RequestUtil:
             self._pages_dir_path,
             f"{encoded_name}_{datetime_str}.html.gz",
         )
-        page_source = self._download_page(url)
+        page_source = self._download_page(url, allow_redirect_to)
         if not os.path.isdir(self._pages_dir_path):
             Print.info(f"Creating directory for storing page source: {self._pages_dir_path}")
             os.makedirs(self._pages_dir_path, exist_ok=False)
@@ -201,7 +207,7 @@ class RequestUtil:
     def _filename_encode(filename: str) -> str:
         return b32encode(filename.encode()).decode()
 
-    def _download_page(self, url: str) -> str:
+    def _download_page(self, url: str, allow_redirect_to: Optional[re.Pattern]) -> str:
         if (
             self._requests_limit is not None
             and self._current_requests_count >= self._requests_limit
@@ -262,9 +268,10 @@ class RequestUtil:
                         continue
                     raise ScrapeError("Bricklink offline for more than 200 minutes")
 
-                raise ScrapeError(
-                    f"Unexpected redirect when downloading page: {url} -> {resp.url}"
-                )
+                if not (allow_redirect_to and allow_redirect_to.match(resp.url)):
+                    raise ScrapeError(
+                        f"Unexpected redirect when downloading page: {url} -> {resp.url}"
+                    )
             return resp.text
 
         Print.warning(f"Quota Exceeded for all {self._sessions_num} sessions, exiting...")

@@ -73,6 +73,11 @@ RE_AVG_PRICE = re.compile(rf"avg\s+price{RE_PRICE_COMMON}")
 RE_QTY_AVG_PRICE = re.compile(rf"qty\s+avg\s+price{RE_PRICE_COMMON}")
 RE_MAX_PRICE = re.compile(rf"max\s+price{RE_PRICE_COMMON}")
 
+# Allowed redirect from parts list for a category with single part
+RE_ALLOWED_SINGLE_PART_REDIRECT = re.compile(
+    r"^https\:\/\/www\.bricklink\.com\/v2\/catalog\/catalogitem\.page\?P\=[a-zA-Z0-9\.\-\_]+$"
+)
+
 
 class BricklinkUrl:
     """
@@ -215,9 +220,15 @@ class CategoryScrape:
 
     def scrape_parts(self) -> None:
         Print.info(f"Scraping parts list for category: {self.name!r}")
+        allowed_redirect = (
+            dict(allow_redirect_to=RE_ALLOWED_SINGLE_PART_REDIRECT)
+            if self.parts_count == 1
+            else {}
+        )
         first_page_source = RequestUtil.instance().get_page(
             BricklinkUrl.parts_list(self.category_id, page=1),
             cache_timeout=PARTS_LIST_PAGE_CACHE_TIMEOUT,
+            **allowed_redirect,
         )
         bs = bs4.BeautifulSoup(first_page_source, BS4_HTML_PARSER)
         # Categories with single part are redirected to the part page
