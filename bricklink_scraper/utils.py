@@ -215,7 +215,7 @@ class RequestUtil:
             raise RequestLimitReached()
         if self._current_requests_start_time < 0:
             self._current_requests_start_time = time.time()
-        daily_offline_attempts = 0
+        daily_offline_retries = 0
         while self._request_sessions:
             sessions = list(enumerate(self._request_sessions))
             session_idx, (session, request_headers, _) = random.choice(sessions)
@@ -258,11 +258,11 @@ class RequestUtil:
             resp.raise_for_status()
             if len(resp.history) != 0:
                 if "oops.asp?err=dailyOffline" in resp.url:
-                    if daily_offline_attempts < 10:
-                        daily_offline_attempts += 1
+                    if daily_offline_retries < 10:
+                        daily_offline_retries += 1
                         Print.warning(
                             "Bricklink offline, waiting 20 minutes before trying again"
-                            f" ({daily_offline_attempts}/10)..."
+                            f" ({daily_offline_retries}/10)..."
                         )
                         time.sleep(20 * 60)
                         continue
