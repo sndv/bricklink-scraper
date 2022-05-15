@@ -40,6 +40,10 @@ DEFAULT_REQUEST_SESSIONS = 1
 # Minimum and maximum pause before request
 REQUEST_DEFAULT_PAUSE_MIN = 1.0
 REQUEST_DEFAULT_PAUSE_MAX = 3.0
+# Retring of requests in case of 4xx, 5xx, etc.
+MAX_REQUEST_RETRIES = 5
+REQUEST_RETRY_MIN_PAUSE = 16.0
+REQUEST_RETRY_MAX_PAUSE = 24.0
 
 # Cache timeouts
 CATEGORIES_PAGE_CACHE_TIMEOUT = timedelta(minutes=30)

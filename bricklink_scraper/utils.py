@@ -27,6 +27,9 @@ from config import (
     CURRENCY_INFO_RESPONSE_SUCCESS,
     CURRENCY_INFO_RESPONSE_RATES,
     DEFAULT_PAGE_CACHE_TIMEOUT,
+    MAX_REQUEST_RETRIES,
+    REQUEST_RETRY_MIN_PAUSE,
+    REQUEST_RETRY_MAX_PAUSE,
 )
 
 
@@ -215,7 +218,7 @@ class RequestUtil:
             raise RequestLimitReached()
         if self._current_requests_start_time < 0:
             self._current_requests_start_time = time.time()
-        daily_offline_retries = 0
+        daily_offline_retries = unexpected_status_retries = 0
         while self._request_sessions:
             sessions = list(enumerate(self._request_sessions))
             session_idx, (session, request_headers, _) = random.choice(sessions)
@@ -253,6 +256,16 @@ class RequestUtil:
                     f" {USER_AGENTS.index(request_headers[self.REQUEST_USER_AGENT_KEY])}."
                 )
                 self._request_sessions.pop(session_idx)
+                continue
+
+            if resp.status_code != 200 and unexpected_status_retries < MAX_REQUEST_RETRIES:
+                unexpected_status_retries += 1
+                pause = random.uniform(REQUEST_RETRY_MIN_PAUSE, REQUEST_RETRY_MAX_PAUSE)
+                Print.warning(
+                    f"Received status code: {resp.status_code}, retrying in {pause} seconds"
+                    f" ({unexpected_status_retries}/{MAX_REQUEST_RETRIES})..."
+                )
+                time.sleep(pause)
                 continue
 
             resp.raise_for_status()
