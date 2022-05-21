@@ -21,6 +21,7 @@ SELECT
   coloredpart.six_month_new_total_qty AS qty_sold,
   coloredpart.six_month_new_times_sold AS times_sold,
   coloredpart.six_month_new_avg_price AS average_price,
+  coloredpart.six_month_new_qty_avg_price AS qty_average_price,
   'https://www.bricklink.com/v2/catalog/catalogitem.page?P=' || part.item_id AS bricklink_url,
   'https://www.bricklink.com/catalogPG.asp?P=' || part.item_id || '&ColorID=' || coloredpart.color_id AS bricklink_price_url
 FROM
@@ -40,6 +41,7 @@ SELECT
   SUM(coloredpart.six_month_new_total_qty) AS qty_sold,
   SUM(coloredpart.six_month_new_times_sold) AS times_sold,
   ROUND(AVG(coloredpart.six_month_new_avg_price), 2) AS average_price,
+  ROUND(AVG(coloredpart.six_month_new_qty_avg_price), 2) AS qty_average_price,
   'https://www.bricklink.com/v2/catalog/catalogitem.page?P=' || part.item_id AS bricklink_url
 FROM
   coloredpart
