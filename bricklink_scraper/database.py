@@ -11,6 +11,47 @@ from peewee import (
 from config import SQLITE_DATABASE_PATH
 
 
+MOST_SOLD_PARTS_CREATE_VIEW_SQL = """
+CREATE VIEW IF NOT EXISTS most_sold_parts AS
+SELECT
+  part.item_id AS item_bricklink_id,
+  coloredpart.color_name AS color_name,
+  part.item_name AS item_name,
+  category.name AS category,
+  coloredpart.six_month_new_total_qty AS qty_sold,
+  coloredpart.six_month_new_times_sold AS times_sold,
+  coloredpart.six_month_new_avg_price AS average_price,
+  'https://www.bricklink.com/v2/catalog/catalogitem.page?P=' || part.item_id AS bricklink_url,
+  'https://www.bricklink.com/catalogPG.asp?P=' || part.item_id || '&ColorID=' || coloredpart.color_id AS bricklink_price_url
+FROM
+  coloredpart
+  JOIN part ON coloredpart.part_id = part.id
+  JOIN category ON part.category_id = category.id
+ORDER BY
+  qty_sold DESC;
+"""
+
+MOST_SOLD_PARTS_COMBINED_CREATE_VIEW_SQL = """
+CREATE VIEW IF NOT EXISTS most_sold_parts_combined AS
+SELECT
+  part.item_id AS item_bricklink_id,
+  part.item_name AS item_name,
+  category.name AS category,
+  SUM(coloredpart.six_month_new_total_qty) AS qty_sold,
+  SUM(coloredpart.six_month_new_times_sold) AS times_sold,
+  ROUND(AVG(coloredpart.six_month_new_avg_price), 2) AS average_price,
+  'https://www.bricklink.com/v2/catalog/catalogitem.page?P=' || part.item_id AS bricklink_url
+FROM
+  coloredpart
+  JOIN part ON coloredpart.part_id = part.id
+  JOIN category ON part.category_id = category.id
+GROUP BY
+  part.id
+ORDER BY
+  qty_sold DESC;
+"""
+
+
 if SQLITE_DATABASE_PATH is None:
     raise RuntimeError("Database path not set")
 
@@ -74,3 +115,6 @@ class ColoredPart(BaseModel):
 
 
 db.create_tables([Category, Part, ColoredPart])
+
+db.execute_sql(MOST_SOLD_PARTS_CREATE_VIEW_SQL)
+db.execute_sql(MOST_SOLD_PARTS_COMBINED_CREATE_VIEW_SQL)
