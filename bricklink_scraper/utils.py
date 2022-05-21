@@ -167,8 +167,8 @@ class RequestUtil:
                 page_td = dt.datetime.utcnow() - page_timestamp
                 if page_td > cache_timeout:
                     Print.info(
-                        f"All cached versions of page {url!r} older than {cache_timeout!s},"
-                        " re-downloading page."
+                        f"All cached versions of page {url!r} older than {cache_timeout!s}"
+                        f" (most recent: {page_td!s} ago), re-downloading page."
                     )
                     break
                 Print.debug(f"Reading page {url} from file {local_page_file}")
