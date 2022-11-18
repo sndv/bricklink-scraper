@@ -62,6 +62,9 @@ def main(
     requests_limit: Optional[int] = None,
 ) -> None:
     config.SQLITE_DATABASE_PATH = os.path.join(data_dir, SQLITE_DATABASE_FILENAME)
+    if not os.path.exists(data_dir):
+        os.mkdir(data_dir)
+
     from scrape import run_scrape
 
     pages_dir = os.path.join(data_dir, PAGES_DIR_NAME)
