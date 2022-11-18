@@ -48,9 +48,9 @@ REQUEST_RETRY_MAX_PAUSE = 24.0
 # Cache timeouts
 CATEGORIES_PAGE_CACHE_TIMEOUT = timedelta(minutes=10)
 PARTS_LIST_PAGE_CACHE_TIMEOUT = timedelta(hours=4)
-PART_DETAILS_CACHE_TIMEOUT = timedelta(days=30)
-COLORED_PART_DETAILS_CACHE_TIMEOUT = timedelta(days=30)
-DEFAULT_PAGE_CACHE_TIMEOUT = timedelta(days=30)
+PART_DETAILS_CACHE_TIMEOUT = timedelta(days=90)
+COLORED_PART_DETAILS_CACHE_TIMEOUT = timedelta(days=90)
+DEFAULT_PAGE_CACHE_TIMEOUT = timedelta(days=90)
 
 # List of user agents to pick randomly for each session
 USER_AGENTS = [
