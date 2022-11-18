@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import datetime as dt
 import urllib.parse
 from typing import Optional, Callable
 
@@ -225,10 +226,14 @@ class CategoryScrape:
             if self.parts_count == 1
             else {}
         )
-        first_page_source = RequestUtil.instance().get_page(
-            BricklinkUrl.parts_list(self.category_id, page=1),
-            cache_timeout=PARTS_LIST_PAGE_CACHE_TIMEOUT,
-            **allowed_redirect,
+        first_page_source = (
+            RequestUtil.instance()
+            .get_page(
+                BricklinkUrl.parts_list(self.category_id, page=1),
+                cache_timeout=PARTS_LIST_PAGE_CACHE_TIMEOUT,
+                **allowed_redirect,
+            )
+            .source
         )
         bs = bs4.BeautifulSoup(first_page_source, BS4_HTML_PARSER)
         # Categories with single part are redirected to the part page
@@ -250,9 +255,13 @@ class CategoryScrape:
             parts = []
             parts += self._get_items_from_list_page(first_page_source)
             for page_n in range(2, total_pages + 1):
-                page_source = RequestUtil.instance().get_page(
-                    BricklinkUrl.parts_list(self.category_id, page=page_n),
-                    cache_timeout=PARTS_LIST_PAGE_CACHE_TIMEOUT,
+                page_source = (
+                    RequestUtil.instance()
+                    .get_page(
+                        BricklinkUrl.parts_list(self.category_id, page=page_n),
+                        cache_timeout=PARTS_LIST_PAGE_CACHE_TIMEOUT,
+                    )
+                    .source
                 )
                 parts += self._get_items_from_list_page(page_source)
             if len(parts) != total_items:
@@ -317,9 +326,13 @@ class PartScrape:
             f"Scraping details for part with id: {self.part_id!r} (category:"
             f" {self.category.name!r})"
         )
-        page_source = RequestUtil.instance().get_page(
-            BricklinkUrl.part_info(self.part_id),
-            cache_timeout=PART_DETAILS_CACHE_TIMEOUT,
+        page_source = (
+            RequestUtil.instance()
+            .get_page(
+                BricklinkUrl.part_info(self.part_id),
+                cache_timeout=PART_DETAILS_CACHE_TIMEOUT,
+            )
+            .source
         )
         bs = bs4.BeautifulSoup(page_source, BS4_HTML_PARSER)
         title = self._get_title(bs)
@@ -370,15 +383,19 @@ class ColoredPartScrape:
 
     @staticmethod
     def _price_data_fields_list() -> list[
-        list[tuple[str, re.Pattern, Callable[[re.Match], int]]]
+        list[tuple[str, re.Pattern, Callable[[re.Match, Optional[dt.datetime]], int]]]
     ]:
-        def convert_qty(qty_match: re.Match) -> int:
+        def convert_qty(qty_match: re.Match, timestamp: Optional[dt.datetime] = None) -> int:
             return int(qty_match.group(1))
 
-        def convert_price(price_match: re.Match) -> int:
+        def convert_price(price_match: re.Match, timestamp: Optional[dt.datetime]) -> int:
+            if timestamp is None:
+                raise RuntimeError("Page timestamp is required for converting prices")
             return round(
                 RequestUtil.instance().convert_to_euro(
-                    price_match.group(1), float(price_match.group(2).replace(",", ""))
+                    price_match.group(1),
+                    float(price_match.group(2).replace(",", "")),
+                    timestamp,
                 )
                 * 10000
             )
@@ -424,11 +441,11 @@ class ColoredPartScrape:
         Print.info(
             f"Scraping full details for part {self.part.part_id!r} with color {self.color_name!r}"
         )
-        page_source = RequestUtil.instance().get_page(
+        page = RequestUtil.instance().get_page(
             BricklinkUrl.part_details(self.part.part_id, self.color_id),
             cache_timeout=COLORED_PART_DETAILS_CACHE_TIMEOUT,
         )
-        bs = bs4.BeautifulSoup(page_source, BS4_HTML_PARSER)
+        bs = bs4.BeautifulSoup(page.source, BS4_HTML_PARSER)
         td_box_list = bs.select(SELECTOR_ITEM_DETAILS_BOX_TD)
         if len(td_box_list) != 4:
             raise ScrapeError(
@@ -461,7 +478,7 @@ class ColoredPartScrape:
                         f"Failed to parse item info field {data_field}: {info_text!r} with"
                         f" regular expression: {data_field_re!r}"
                     )
-                price_values[data_field] = cnv_fn(match)
+                price_values[data_field] = cnv_fn(match, page.timestamp)
 
         self.db_record = ColoredPart.create(
             part=self.part.db_record,
@@ -473,9 +490,13 @@ class ColoredPartScrape:
 
 
 def run_scrape() -> None:
-    categories_page_source = RequestUtil.instance().get_page(
-        BricklinkUrl.categories(),
-        cache_timeout=CATEGORIES_PAGE_CACHE_TIMEOUT,
+    categories_page_source = (
+        RequestUtil.instance()
+        .get_page(
+            BricklinkUrl.categories(),
+            cache_timeout=CATEGORIES_PAGE_CACHE_TIMEOUT,
+        )
+        .source
     )
     categories = CategoryScrape.scrape_from_page(categories_page_source)
     for category in categories:

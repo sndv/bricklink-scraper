@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 
 import os
 import sys
@@ -17,6 +18,9 @@ import requests
 import bs4
 
 from config import (
+    CONVERSION_RATES_EXPIRY_TIME,
+    CONVERSION_RATES_FILE_PREFIX,
+    SAVED_CONVERSION_RATES_DATETIME_FORMAT,
     USER_AGENTS,
     CURRENCY_INFO_URL,
     CURRENCY_NAME_MAP,
@@ -50,12 +54,20 @@ class Print:
     COLOR_ERROR = "\033[31m"
     COLOR_END = "\033[0m"
 
+    # TODO: Add as command line argument
+    TRACE_ENEBLED = False
+
     @classmethod
     def _print(cls, msg: str, prefix: str, color: Optional[str] = None) -> None:
         if cls.COLORS_ENABLED and color:
             print(f"{color}{prefix}: {msg}{cls.COLOR_END}", flush=True)
         else:
             print(f"{prefix}: {msg}", flush=True)
+
+    @classmethod
+    def trace(cls, msg: str) -> None:
+        if cls.TRACE_ENEBLED:
+            cls._print(msg, prefix="T", color=cls.COLOR_DEBUG)
 
     @classmethod
     def debug(cls, msg: str) -> None:
@@ -72,6 +84,12 @@ class Print:
     @classmethod
     def error(cls, msg: str) -> None:
         cls._print(msg, prefix="E", color=cls.COLOR_ERROR)
+
+
+class Page:
+    def __init__(self, source: str, timestamp: dt.datetime) -> None:
+        self.source: str = source
+        self.timestamp: dt.datetime = timestamp
 
 
 def parse_url(url: str) -> tuple[parse.SplitResult, dict[str, str]]:
@@ -122,6 +140,7 @@ class RequestUtil:
         sessions_num: int,
         requests_limit: Optional[int],
         pages_dir_path: str,
+        conversion_rates_dir_path: str,
     ):
         if self._instance is not None:
             raise RuntimeError("RequestUtil is a singleton")
@@ -131,8 +150,14 @@ class RequestUtil:
         self._sessions_num = sessions_num
         self._requests_limit = requests_limit
         self._pages_dir_path = pages_dir_path
+        self._rates_dir_path = conversion_rates_dir_path
 
-        self.euro_conversion_rates: Optional[dict[str, float]] = None
+        # Timestamp -> Conversion json file
+        self.euro_conversion_rate_files: dict[
+            dt.datetime, str
+        ] = self._get_euro_conversion_rate_files()
+        # Timestamp (matching the one above) -> Conversion table
+        self.euro_conversion_rates: dict[dt.datetime, dict[str, float]] = {}
 
         self._current_requests_count: int = 0
         self._current_requests_start_time: float = -1.0
@@ -141,6 +166,22 @@ class RequestUtil:
             (requests.Session(), self._request_headers(ua), 0)
             for ua in random.sample(USER_AGENTS, k=sessions_num)
         ]
+
+    def _get_euro_conversion_rate_files(self) -> dict[dt.datetime, str]:
+        glob_matches = glob.glob(
+            os.path.join(self._rates_dir_path, f"{CONVERSION_RATES_FILE_PREFIX}*.json")
+        )
+        result = {
+            dt.datetime.strptime(
+                os.path.basename(rates_file_path)
+                .removeprefix(CONVERSION_RATES_FILE_PREFIX)
+                .split(".")[0],
+                SAVED_CONVERSION_RATES_DATETIME_FORMAT,
+            ): rates_file_path
+            for rates_file_path in glob_matches
+        }
+        Print.info(f"Found {len(result)} saved currency conversion rate tables")
+        return result
 
     @classmethod
     def _request_headers(cls, user_agent: str) -> dict[str, str]:
@@ -154,7 +195,7 @@ class RequestUtil:
         url: str,
         cache_timeout: dt.timedelta = DEFAULT_PAGE_CACHE_TIMEOUT,
         allow_redirect_to: Optional[re.Pattern] = None,
-    ) -> str:
+    ) -> Page:
         encoded_name = self._filename_encode(url)
         glob_matches = glob.glob(os.path.join(self._pages_dir_path, f"{encoded_name}_*.html.gz"))
         if glob_matches:
@@ -174,10 +215,11 @@ class RequestUtil:
                 Print.debug(f"Reading page {url} from file {local_page_file}")
                 try:
                     with gzip.open(local_page_file) as fh:
-                        return fh.read().decode()
+                        return Page(source=fh.read().decode(), timestamp=page_timestamp)
                 except gzip.BadGzipFile:
                     Print.warning(f"Bad gzip file, ignoring: {local_page_file}")
-        datetime_str = dt.datetime.utcnow().strftime(SAVED_PAGE_DATETIME_FORMAT)
+        page_datetime = dt.datetime.utcnow()
+        datetime_str = page_datetime.strftime(SAVED_PAGE_DATETIME_FORMAT)
         local_page_file = os.path.join(
             self._pages_dir_path,
             f"{encoded_name}_{datetime_str}.html.gz",
@@ -189,22 +231,84 @@ class RequestUtil:
         Print.debug(f"Saving page {url} to file {local_page_file}")
         with gzip.open(local_page_file, "wb") as fh:
             fh.write(page_source.encode())
-        return page_source
+        return Page(source=page_source, timestamp=page_datetime)
 
-    def convert_to_euro(self, currency: str, amount: float) -> float:
-        if self.euro_conversion_rates is None:
-            Print.info("Downloading currency conversion info...")
-            resp = requests.get(CURRENCY_INFO_URL)
-            resp.raise_for_status()
-            resp_json = resp.json()
-            if resp_json[CURRENCY_INFO_RESPONSE_RESULT].lower() != CURRENCY_INFO_RESPONSE_SUCCESS:
-                raise ScrapeError(
-                    f"Failed to retrieve currency conversion info from: {CURRENCY_INFO_URL}"
-                )
-            self.euro_conversion_rates = resp_json[CURRENCY_INFO_RESPONSE_RATES]
-            Print.debug(f"Received conversion rates: {self.euro_conversion_rates!r}")
+    def convert_to_euro(self, currency: str, amount: float, timestamp: dt.datetime) -> float:
+        Print.trace(
+            f"Converting {amount} {currency.upper()} currency into euro for timestamp {timestamp}"
+        )
+        euro_conversion_rates = self._get_euro_conversion_rates_for_timestamp(timestamp)
         currency_name = CURRENCY_NAME_MAP.get(currency.lower(), currency).upper()
-        return amount / self.euro_conversion_rates[currency_name]
+        return amount / euro_conversion_rates[currency_name]
+
+    def _get_euro_conversion_rates_for_timestamp(
+        self, timestamp: dt.datetime
+    ) -> dict[str, float]:
+        # Check if latest downloaded rate is not too old, download new
+        # conversion table in this case; checking current timestamp instead of
+        # page timestamp so that we can download the new conversion rates and
+        # then use the one closest to the page timestamp which in rare cases
+        # may happen to still be the previous one
+        if len(self.euro_conversion_rate_files) == 0 or (
+            timestamp >= (latest_rates_timestamp := max(self.euro_conversion_rate_files.keys()))
+            and dt.datetime.utcnow() - latest_rates_timestamp > CONVERSION_RATES_EXPIRY_TIME
+        ):
+            self._download_euro_conversion_rates()
+        # TODO: Extremely inefficient way to find the closest timestamp
+        ts_differences = [
+            (file_ts, abs(timestamp - file_ts))
+            for file_ts in self.euro_conversion_rate_files.keys()
+        ]
+        closest_timestamp, difference = min(ts_differences, key=lambda el: el[1])
+        Print.trace(
+            f"Using closest conversion rates timestamp {closest_timestamp} to target {timestamp}"
+        )
+        if difference > CONVERSION_RATES_EXPIRY_TIME:
+            Print.warning(
+                f"Closest conversion rates map still not close enough, difference: {difference}."
+                " This can result in inacurrate prices and may be caused by deleting previously"
+                " saved conversion rates."
+            )
+        if closest_timestamp not in self.euro_conversion_rates:
+            with open(self.euro_conversion_rate_files[closest_timestamp], encoding="utf-8") as fp:
+                self.euro_conversion_rates[closest_timestamp] = json.load(fp)[
+                    CURRENCY_INFO_RESPONSE_RATES
+                ]
+        return self.euro_conversion_rates[closest_timestamp]
+
+    def _download_euro_conversion_rates(self) -> None:
+        Print.info("Downloading currency conversion info...")
+        resp = requests.get(CURRENCY_INFO_URL)
+        resp.raise_for_status()
+        resp_json = resp.json()
+        if resp_json[CURRENCY_INFO_RESPONSE_RESULT].lower() != CURRENCY_INFO_RESPONSE_SUCCESS:
+            raise ScrapeError(
+                f"Failed to retrieve currency conversion info from: {CURRENCY_INFO_URL}"
+            )
+        euro_conversion_rates = resp_json[CURRENCY_INFO_RESPONSE_RATES]
+        Print.debug(f"Received conversion rates: {euro_conversion_rates!r}")
+        timestamp = dt.datetime.utcnow()
+        datetime_str = timestamp.strftime(SAVED_CONVERSION_RATES_DATETIME_FORMAT)
+        rates_filepath = os.path.join(
+            self._rates_dir_path, f"{CONVERSION_RATES_FILE_PREFIX}{datetime_str}.json"
+        )
+        Print.info(f"Saving downloaded currency conversion rates to file {rates_filepath}")
+        assert not os.path.exists(rates_filepath)
+        if not os.path.isdir(self._rates_dir_path):
+            Print.info(
+                "Creating directory for storing currency conversion rates:"
+                f" {self._rates_dir_path}"
+            )
+            os.mkdir(self._rates_dir_path)
+        with open(rates_filepath, "w", encoding="utf-8") as fp:
+            json.dump(resp_json, fp)
+        # Parse the timestamp string instead of using the original in order
+        # to have a timestamp based on the filename as it is for the rest
+        save_timestamp = dt.datetime.strptime(
+            datetime_str, SAVED_CONVERSION_RATES_DATETIME_FORMAT
+        )
+        self.euro_conversion_rate_files[save_timestamp] = rates_filepath
+        self.euro_conversion_rates[save_timestamp] = euro_conversion_rates
 
     @staticmethod
     def _filename_encode(filename: str) -> str:

@@ -25,11 +25,15 @@ CURRENCY_NAME_MAP = {
     "ca": "cad",
 }
 
-# Local path for saved pages
+# Local path for saved pages and currency conversion rates
 DEFAULT_DATA_DIR_RELATIVE_PATH = "../data"
 PAGES_DIR_NAME = "pages"
+CONVERSION_RATES_DIR_NAME = "conversion-rates"
+CONVERSION_RATES_FILE_PREFIX = "euro-rates-"
 # Datetime format for saved pages, needs to be alphabetically sortable
 SAVED_PAGE_DATETIME_FORMAT = "%Y%m%d-%H%M%S"
+# Datetime format for saved currency conversion rates, needs to be alphabetically sortable
+SAVED_CONVERSION_RATES_DATETIME_FORMAT = "%Y%m%d-%H%M%S"
 
 # Allowed (expected) characters in item ids
 VALID_ITEM_ID_CHARACTERS = string.ascii_letters + string.digits + "_-."
@@ -51,6 +55,9 @@ PARTS_LIST_PAGE_CACHE_TIMEOUT = timedelta(hours=4)
 PART_DETAILS_CACHE_TIMEOUT = timedelta(days=90)
 COLORED_PART_DETAILS_CACHE_TIMEOUT = timedelta(days=90)
 DEFAULT_PAGE_CACHE_TIMEOUT = timedelta(days=90)
+
+# Conversion rates expiry time
+CONVERSION_RATES_EXPIRY_TIME = timedelta(hours=6)
 
 # List of user agents to pick randomly for each session
 USER_AGENTS = [

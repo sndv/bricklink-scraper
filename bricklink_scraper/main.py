@@ -7,6 +7,7 @@ import click
 from utils import RequestLimitReached, ScrapeError, RequestUtil, Print
 import config
 from config import (
+    CONVERSION_RATES_DIR_NAME,
     REQUEST_DEFAULT_PAUSE_MIN,
     REQUEST_DEFAULT_PAUSE_MAX,
     DEFAULT_REQUEST_SESSIONS,
@@ -68,6 +69,7 @@ def main(
     from scrape import run_scrape
 
     pages_dir = os.path.join(data_dir, PAGES_DIR_NAME)
+    conversion_rates_dir = os.path.join(data_dir, CONVERSION_RATES_DIR_NAME)
     # Create RequestUtil instance
     RequestUtil(
         min_pause=min_pause,
@@ -75,6 +77,7 @@ def main(
         sessions_num=sessions_num,
         requests_limit=requests_limit,
         pages_dir_path=pages_dir,
+        conversion_rates_dir_path=conversion_rates_dir,
     )
     try:
         run_scrape()
