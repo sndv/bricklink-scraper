@@ -341,6 +341,10 @@ class RequestUtil:
             except requests.exceptions.Timeout:
                 # Very long response times can be intentional
                 timed_out = True
+            except requests.exceptions.ConnectionError as err:
+                if "timed out" not in str(err).lower():
+                    raise
+                timed_out = True
 
             if (
                 timed_out
