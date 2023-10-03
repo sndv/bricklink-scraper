@@ -60,40 +60,40 @@ DEFAULT_PAGE_CACHE_TIMEOUT = timedelta(days=90)
 CONVERSION_RATES_EXPIRY_TIME = timedelta(hours=6)
 
 # List of user agents to pick randomly for each session
+# TODO: get agents automatically e.g. <https://www.useragents.me/#most-common-desktop-useragents-json-csv>
 USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
-    " Chrome/103.0.5026.0 Safari/537.36 Edg/103.0.1254.0",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
-    " Chrome/103.0.5026.0 Safari/537.36 Edg/103.0.1253.0",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
-    " Chrome/102.0.5005.27 Safari/537.36 Edg/102.0.1245.7",
-    "Mozilla/5.0 (Windows NT 6.3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54"
-    " Safari/537.36 Edg/101.0.1210.39",
-    "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54"
-    " Safari/537.36 Edg/101.0.1210.39",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
-    " Chrome/101.0.4951.41 Safari/537.36 Edg/101.0.1210.32",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
-    " Chrome/103.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
-    " Chrome/101.0.4951.61 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54"
-    " Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
-    " Chrome/101.0.4951.41 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127"
-    " Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
-    " Chrome/103.0.5028.0 Safari/537.36 OPR/89.0.4415.0 (Edition developer)",
-    "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
-    " Chrome/101.0.4951.41 Safari/537.36 OPR/87.0.4390.17 (Edition beta)",
-    "Mozilla/5.0 (Windows NT 10.0; WOW64; x64; rv:105.0esr) Gecko/20010101 Firefox/105.0esr",
-    "Mozilla/5.0 (Windows NT 10.0; rv:100.0) Gecko/20100101 Firefox/100.0",
-    "Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0",
-    "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0",
-    "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko)"
-    " Chrome/90.0.4430.93 Safari/537.36 Vivaldi/3.7",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
-    " Chrome/90.0.4430.93 Safari/537.36 Vivaldi/3.7",
+    (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+        " Chrome/117.0.0.0 Safari/537.36"
+    ),
+    (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+        " Chrome/117.0.0.0 Safari/537.3"
+    ),
+    (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)"
+        " Chrome/117.0.0.0 Safari/537.36"
+    ),
+    (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+        " Chrome/117.0.0.0 Safari/537.36 Edg/117.0.2045.47"
+    ),
+    (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)"
+        " Chrome/117.0.0.0 Safari/537.3"
+    ),
+    (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+        " Chrome/117.0.0.0 Safari/537.36 Edg/117.0.2045.43"
+    ),
+    (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+        " Chrome/117.0.0.0 Safari/537.36 Edg/117.0.2045.4"
+    ),
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/118.",
+    (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)"
+        " Chrome/116.0.0.0 Safari/537.36"
+    ),
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/118.0",
 ]
