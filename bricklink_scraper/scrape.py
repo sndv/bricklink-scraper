@@ -43,7 +43,7 @@ RE_ITEMS_LIST_PAGE_COUNT = re.compile(
 )
 
 ### Common item details page
-SELECTOR_ITEM_NAME = "span#item-name-title"
+SELECTOR_ITEM_NAME = "h1#item-name-title"
 SELECTOR_ITEM_WEIGHT = "span#item-weight-info"
 SELECTOR_ITEM_COLORS_LIST = (
     "#_idTabContentsP .pciPGTabColorDropdownList > .pciSelectColorColorItem"
